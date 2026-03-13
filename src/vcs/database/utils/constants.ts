@@ -4,7 +4,7 @@ import { extraResourcesPath, isDev, platformName, userDataPath } from "../../../
 if (process.env.DATABASE_FILENAME === undefined) { process.env.DATABASE_FILENAME = "vcs.db" }
 
 export const databasePath = isDev ? path.join(__dirname, process.env.DATABASE_FILENAME) : path.join(userDataPath, process.env.DATABASE_FILENAME);
-export const databaseUrl  = "file:" + databasePath //isDev ? process.env.DATABASE_URL : "file:" + databasePath;
+export const databaseUrl  = "file:" + databasePath + "?connection_limit=1";
 
 console.log("Database Path: " + databasePath)
 console.log("Database URL: "  + databaseUrl)

@@ -1,7 +1,7 @@
 import type { Configuration } from 'webpack';
 
-import { rules } from './webpack.rules';
-import { plugins } from './webpack.plugins';
+import { rules } from './webpack.rules.ts';
+import { plugins } from './webpack.plugins.ts';
 
 // eslint-disable-next-line import/default
 import CopyPlugin from 'copy-webpack-plugin';
@@ -15,7 +15,7 @@ rules.push({
 // required by MonacoWebpackPlugin
 rules.push({
     test: /\.ttf$/,
-	use: ['file-loader']
+    use: ['file-loader']
 })
 
 export const rendererConfig: Configuration = {
