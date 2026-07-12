@@ -2,7 +2,7 @@
 
 ## Description
 
-This project is the attempt on an editor for creative coding based on Microsoft's Monaco Editor. Its mainly designed for the P5JS creative coding library for JavaScript and supports a novel versioning approach, as well as a real-time preview with error feedback. ChatGPT is used to provide helpful insights on both, versions and errors as well.
+This project is an editor for creative coding based on Microsoft's Monaco Editor. Its mainly designed for the [p5.js](https://p5js.org) creative coding library for JavaScript and supports a novel versioning approach, as well as a real-time preview with error feedback. ChatGPT is used to provide helpful insights on both, versions and errors as well.
 
 
 ## Setup
@@ -43,7 +43,6 @@ Finally, you can use the shortcuts listed in the context menu to access these fe
 - Manually downgraded css-loader@5.2.7 for webpack to make the . See https://github.com/microsoft/monaco-editor/issues/2930.
 - The build setup with Electron Forge is based on the webpack-typescript template, but was heavily altered to allow for both, a working development and production build including the database functionality. So keep that in mind when exploring the project. Not all of that might be the overall best solution, but it works. Hints for some choices can be found throughout the code.
 - The `docker-compose.yaml` file is currently not needed anymore. It was used for a server-based database approach, and might make a comeback in the future.
-- This README is by no means complete and only provides an inital baseline. It will be expanded in the future.
 
 
 ## Things to Fix:
@@ -64,5 +63,3 @@ This is my recommended to do list for future work on this:
 - Version comparison using OpenAI's GPT.
 - Optimize backend to write to cache, and update database asynchronously (reading works already).
 - Blocks stick to semantics (e.g., brackets of functions, etc.)
-
-This is just a list that was up in my head immediately. More is definetly requires.
