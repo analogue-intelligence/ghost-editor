@@ -38,25 +38,45 @@ const toolbarTemplate = [
                     browserWindow.webContents.send('menu-save')
                 }
             },
-            { 
-                role: 'quit' 
+            {
+                role: 'quit'
+            }
+        ]
+    }),
+    new MenuItem({
+        label: 'View',
+        submenu: [
+            {
+                id: 'toggle-rulers',
+                label: 'Show Rulers',
+                type: 'checkbox',
+                checked: true,
+                accelerator: process.platform === 'darwin' ? 'Cmd+R' : 'Ctrl+R',
+                click: (menuItem, browserWindow) => {
+                    browserWindow.webContents.send('menu-toggle-rulers', menuItem.checked)
+                }
             }
         ]
     }),
 ]
 
-function setupToolbarEvents(browserWindow: BrowserWindow): void {
+function setupToolbarEvents(browserWindow: BrowserWindow, menu: Menu): void {
     ipcMain.handle('save-file', async (event, response) => {
         const filePath = await file.saveFile(browserWindow, response.path, response.content)
         if (response.path !== filePath) {
             browserWindow.webContents.send("menu-update-file-path", filePath)
         }
     })
+
+    ipcMain.handle('get-rulers-visible', () => {
+        const item = menu.getMenuItemById('toggle-rulers')
+        return item ? item.checked : true
+    })
 }
 
 export default function setupToolbar(browserWindow: BrowserWindow): Menu {
     const menu = Menu.buildFromTemplate(toolbarTemplate)
     Menu.setApplicationMenu(menu)
-    setupToolbarEvents(browserWindow)
+    setupToolbarEvents(browserWindow, menu)
     return menu
 }

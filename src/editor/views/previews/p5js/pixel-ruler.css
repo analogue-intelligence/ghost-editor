@@ -1,0 +1,83 @@
+.pixel-ruler {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+
+    --ruler-bg:     #f3f3f3;
+    --ruler-tick:   #cccccc;
+    --ruler-text:   #666666;
+    --ruler-accent: #007acc;
+}
+
+@media (prefers-color-scheme: dark) {
+    .pixel-ruler {
+        --ruler-bg:   #1e1e1e;
+        --ruler-tick: #555555;
+        --ruler-text: #888888;
+    }
+}
+
+.pixel-ruler--horizontal {
+    grid-row:    1;
+    grid-column: 2;
+}
+
+.pixel-ruler--vertical {
+    grid-row:    2;
+    grid-column: 1;
+}
+
+.pixel-ruler canvas {
+    display: block;
+    pointer-events: none;
+}
+
+.pixel-ruler__indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--ruler-accent);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+.pixel-ruler--horizontal .pixel-ruler__indicator {
+    width: 1px;
+    height: 100%;
+}
+
+.pixel-ruler--vertical .pixel-ruler__indicator {
+    width: 100%;
+    height: 1px;
+}
+
+.pixel-ruler__label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 9px;
+    line-height: 1;
+    font-family: sans-serif;
+    color: #fff;
+    background: var(--ruler-accent);
+    padding: 1px 3px;
+    border-radius: 2px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+    z-index: 1;
+}
+
+.pixel-ruler--horizontal .pixel-ruler__label {
+    top: 1px;
+    transform-origin: left top;
+}
+
+.pixel-ruler--vertical .pixel-ruler__label {
+    left: 1px;
+    transform-origin: left top;
+}
