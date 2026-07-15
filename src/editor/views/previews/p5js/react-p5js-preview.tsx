@@ -9,6 +9,7 @@ import { throttle } from "../../../utils/helpers"
 import "./react-p5js-preview.css"
 import LoadingView from '../../react/loadingView';
 import { IFramePage } from 'iframe-resizer';
+import PixelRuler, { PixelRulerHandle } from './pixel-ruler';
 
 const uri                 = document.baseURI
 const url                 = new URL("", uri)
@@ -16,6 +17,15 @@ const p5jsScript          = new URL("./libs/p5js/p5.min.js", uri).href
 const iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.contentWindow.min.js", uri).href
 
 const previewPadding = 5
+const rulerThickness = 22
+
+interface SketchLayout {
+    scaleFactor: number
+    maxWidth:    number
+    maxHeight:   number
+    iframeLeft:  number
+    iframeTop:   number
+}
 
 function getHtml(sketchId: number, code: string): string {
     return `
@@ -86,7 +96,35 @@ function getHtml(sketchId: number, code: string): string {
                     sendMessage("resize", { maxWidth, maxHeight })
                 }
 
-                //window.addEventListener("load",   () => scaleCanvases()) 
+                // Mouse events over this document never bubble up to the parent page (it's a
+                // separate browsing context), so cursor tracking for the rulers has to originate
+                // here and be relayed up through the same message channel used for resize/errors.
+                // Coordinates are already in the sketch's own native pixel space -- no scaling needed.
+                ;(function() {
+                    let pendingPos    = null
+                    let rafScheduled  = false
+
+                    function flushPendingPos() {
+                        rafScheduled = false
+                        if (pendingPos) { sendMessage("mousemove", pendingPos) }
+                    }
+
+                    document.addEventListener("mousemove", event => {
+                        pendingPos = { x: event.clientX, y: event.clientY }
+                        if (!rafScheduled) {
+                            rafScheduled = true
+                            requestAnimationFrame(flushPendingPos)
+                        }
+                    })
+
+                    // relatedTarget is null exactly when the pointer leaves the document/frame
+                    // entirely, as opposed to moving between elements within it
+                    document.addEventListener("mouseout", event => {
+                        if (!event.relatedTarget) { sendMessage("mouseleave", {}) }
+                    })
+                })()
+
+                //window.addEventListener("load",   () => scaleCanvases())
                 //window.addEventListener("resize", () => scaleCanvases())
 
                 // setup config object of iFrameResizer
@@ -212,17 +250,28 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
     const lastWorkingSketch     = useRef<{ sketchId: number, code: string } | undefined>(undefined)
     const runtimeRecoverySketch = useRef<{ sketchId: number, code: string } | undefined>(undefined)
 
+    const hRulerRef       = useRef<PixelRulerHandle | null>(null)
+    const vRulerRef       = useRef<PixelRulerHandle | null>(null)
+    const sketchLayoutRef = useRef<SketchLayout | undefined>(undefined)
+    const lastCursorPos   = useRef<{ x: number, y: number } | null>(null)
+
     const [iframeSource, setIframeSource] = useState<string | undefined>(undefined)
     const [sketch,       setSketch]       = useState<string | undefined>(undefined)
     const [errorMessage, setErrorMessage] = useState<string>("")
     const [errorHint,    setErrorHint]    = useState<boolean>(false)
     const [color,        setColor]        = useState<string>("black")
+    const [sketchLayout, setSketchLayout] = useState<SketchLayout | undefined>(undefined)
+    const [showRulers,   setShowRulers]   = useState<boolean>(true)
 
     function renderSketch(sketchId: number, code: string) {
         const oldIframeSource = iframeSource
 
         const newIframeSource = getHtmlUrl(sketchId, code)
         setIframeSource(newIframeSource)
+
+        // the outgoing iframe won't fire a real mouseleave for us, so any cursor indicator it left
+        // behind would otherwise sit stale until the next real mouse movement over the new one
+        hideCursorIndicators()
 
         if (oldIframeSource) { URL.revokeObjectURL(oldIframeSource) }
     }
@@ -281,6 +330,47 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         };
     }, []);
 
+    useEffect(() => { sketchLayoutRef.current = sketchLayout }, [sketchLayout])
+
+    useEffect(() => {
+        // P5JSPreview can be unmounted/remounted (e.g. when the side panel switches to/from the
+        // Ghost Snapshot view), so the initial value has to be queried from the menu's own checked
+        // state rather than always assuming "true" -- otherwise a remount would silently ignore
+        // whatever the user last toggled.
+        window.ipcRenderer.invoke('get-rulers-visible')
+            .then((visible: boolean) => { if (isMounted.current) { setShowRulers(visible) } })
+
+        window.ipcRenderer.on('menu-toggle-rulers', (visible: boolean) => setShowRulers(visible))
+    }, []);
+
+    // Mouse position arrives as messages relayed from inside the sketch iframe (see getHtml())
+    // rather than DOM events on previewContainerRef -- the iframe is a separate browsing context,
+    // so its mouse events never bubble up to a listener on an ancestor element in this page.
+    function hideCursorIndicators(): void {
+        lastCursorPos.current = null
+        hRulerRef.current?.hideCursor()
+        vRulerRef.current?.hideCursor()
+    }
+
+    function updateCursorIndicators(x: number, y: number): void {
+        const layout = sketchLayoutRef.current
+        if (!layout) { return }
+
+        const inBounds = x >= 0 && x <= layout.maxWidth && y >= 0 && y <= layout.maxHeight
+        if (!inBounds) { hideCursorIndicators(); return }
+
+        lastCursorPos.current = { x, y }
+        hRulerRef.current?.showCursorAt(x)
+        vRulerRef.current?.showCursorAt(y)
+    }
+
+    // re-sync the cursor indicator immediately if the sketch layout changes while the mouse is
+    // stationary (e.g. the user resizes createCanvas mid-hover), instead of waiting for the next
+    // mousemove message to catch up
+    useEffect(() => {
+        if (lastCursorPos.current) { updateCursorIndicators(lastCursorPos.current.x, lastCursorPos.current.y) }
+    }, [sketchLayout])
+
     function onMessage({ iframe, message: { sketchId, type, message }}: { iframe: IFrameComponent, message: { type: string, sketchId: number, message: any } }): void {
 
         if (type === "resize") {
@@ -288,20 +378,36 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
             iframe.style.height = `${message.maxHeight}px`
 
             const previewContainer = previewContainerRef.current
-            if (previewContainer) {
-                const computedStyle = getComputedStyle(previewContainer)
-                const scaleFactor   = Math.min(parseFloat(computedStyle.width)  / message.maxWidth,
-                                               parseFloat(computedStyle.height) / message.maxHeight)
+            if (previewContainer && message.maxWidth > 0 && message.maxHeight > 0) {
+                const computedStyle   = getComputedStyle(previewContainer)
+                const containerWidth  = parseFloat(computedStyle.width)
+                const containerHeight = parseFloat(computedStyle.height)
+                const scaleFactor     = Math.min(containerWidth / message.maxWidth, containerHeight / message.maxHeight)
 
                 iframe.style.transform = `scale(${scaleFactor}) translate(-50%, -50%)`
-            } else {
+
+                setSketchLayout({
+                    scaleFactor,
+                    maxWidth:   message.maxWidth,
+                    maxHeight:  message.maxHeight,
+                    iframeLeft: containerWidth  / 2 - (message.maxWidth  * scaleFactor) / 2,
+                    iframeTop:  containerHeight / 2 - (message.maxHeight * scaleFactor) / 2
+                })
+            } else if (!previewContainer) {
                 console.warn("Cannot access container size for iframe!")
             }
 
             return
-        } else {
-            iframe.style.transform = "translate(-50%, -50%)"
         }
+
+        if (type === "mousemove" || type === "mouseleave") {
+            if (sketchId !== latestSketchId.current) { return }
+            if (type === "mousemove") { updateCursorIndicators(message.x, message.y) }
+            else                      { hideCursorIndicators() }
+            return
+        }
+
+        iframe.style.transform = "translate(-50%, -50%)"
 
         if (sketchId !== latestSketchId.current) { return }
 
@@ -329,29 +435,52 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
     return (
         <div className="container" style={{ padding: previewPadding }}>
 
-            <div ref={previewContainerRef} style={{ position: 'relative', flex: 1, padding: 5, border: "1px solid black" }}>
+            <div className="ruler-layout" style={{ ['--ruler-size' as any]: showRulers ? `${rulerThickness}px` : '0px' }}>
 
-                {isMounted && iframeSource && <IframeResizer
-                    forwardRef={iframeRef}
-                    src={iframeSource}
-                    checkOrigin={[url.origin]}
-                    sizeWidth={true}
-                    onMessage={onMessage}
+                {showRulers && <div className="ruler-corner" />}
+                {showRulers && <PixelRuler
+                    ref={hRulerRef}
+                    orientation="horizontal"
+                    thickness={rulerThickness}
+                    scaleFactor={sketchLayout?.scaleFactor}
+                    origin={sketchLayout?.iframeLeft}
+                    sketchSize={sketchLayout?.maxWidth}
+                />}
+                {showRulers && <PixelRuler
+                    ref={vRulerRef}
+                    orientation="vertical"
+                    thickness={rulerThickness}
+                    scaleFactor={sketchLayout?.scaleFactor}
+                    origin={sketchLayout?.iframeTop}
+                    sketchSize={sketchLayout?.maxHeight}
                 />}
 
-                {errorMessage && <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'rgba(255, 255, 255, 0.6)', // semi-transparent black
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <i className="fa-solid fa-circle-exclamation" style={{ fontSize: hideErrorMessage ? "90px" : "120px" }}></i>
-                </div>}
+                <div ref={previewContainerRef}
+                     style={{ position: 'relative', gridRow: 2, gridColumn: 2, padding: 5, border: "1px solid black" }}>
+
+                    {isMounted && iframeSource && <IframeResizer
+                        forwardRef={iframeRef}
+                        src={iframeSource}
+                        checkOrigin={[url.origin]}
+                        sizeWidth={true}
+                        onMessage={onMessage}
+                    />}
+
+                    {errorMessage && <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: 'rgba(255, 255, 255, 0.6)', // semi-transparent black
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <i className="fa-solid fa-circle-exclamation" style={{ fontSize: hideErrorMessage ? "90px" : "120px" }}></i>
+                    </div>}
+
+                </div>
 
             </div>
 
