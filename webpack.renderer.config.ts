@@ -1,4 +1,5 @@
 import type { Configuration } from 'webpack';
+import path from 'path';
 
 import { rules } from './webpack.rules.ts';
 import { plugins } from './webpack.plugins.ts';
@@ -38,5 +39,12 @@ export const rendererConfig: Configuration = {
     ],
     resolve: {
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.css'],
+        // Our own code compiles to CommonJS, which would otherwise resolve the bare "monaco-editor"
+        // specifier to its pre-bundled "min" (CJS) build via package.json's "exports" map. That build
+        // isn't meant to be run through another bundler and breaks resolving its internal nls loader.
+        // Force resolution to the ESM tree that MonacoWebpackPlugin is actually designed to instrument.
+        alias: {
+            'monaco-editor$': path.resolve(process.cwd(), 'node_modules/monaco-editor/esm/vs/editor/editor.main.js'),
+        },
     }
 };
