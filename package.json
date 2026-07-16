@@ -2,7 +2,7 @@
   "name": "ghost-editor",
   "productName": "ghost-editor",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "This is a creative coding IDE that supports exploratory versioning",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -11,10 +11,10 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx ."
   },
-  "keywords": [],
+  "keywords": ["creative coding", "p5.js", "processing", "software"],
   "author": {
-    "name": "Maximilian Mayer",
-    "email": "maximilian_mayer@gmx.net"
+    "name": "Maximilian Mayer, Mauricio Verano Merino",
+    "email": "m.verano.merino@vu.nl"
   },
   "license": "MIT",
   "devDependencies": {
