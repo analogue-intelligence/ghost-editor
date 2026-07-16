@@ -10,8 +10,10 @@
 
 .ruler-layout {
     display: grid;
-    grid-template-columns: var(--ruler-size, 0px) 1fr;
-    grid-template-rows: var(--ruler-size, 0px) 1fr;
+    /* 1fr is shorthand for minmax(auto, 1fr) -- the auto minimum blocks the track from
+       shrinking below its content's intrinsic size, so it must be spelled out explicitly. */
+    grid-template-columns: var(--ruler-size, 0px) minmax(0, 1fr);
+    grid-template-rows: var(--ruler-size, 0px) minmax(0, 1fr);
     flex: 1;
     min-height: 0;
     min-width: 0;

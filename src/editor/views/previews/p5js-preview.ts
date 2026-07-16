@@ -3,7 +3,7 @@ import Synchronizer, { Synchronizable } from "../../utils/synchronizer";
 import { Disposable } from "../../data-types/convenience/monaco";
 import uuid from "../../utils/uuid";
 import { CodeProvider, CodeProviderPreview } from "./preview";
-import { iframeResizer, IFramePage } from "iframe-resizer"
+import iframeResize from "@iframe-resizer/parent"
 
 // TODO: Should be replaced from here: https://github.com/processing/p5.js-web-editor/tree/develop/client/modules/Preview
 
@@ -12,7 +12,7 @@ export default class P5JSPreview extends CodeProviderPreview {
     private static uri                 = document.baseURI
     private static url                 = new URL("", this.uri)
     private static p5jsScript          = new URL("./libs/p5js/p5.min.js", this.uri).href
-    private static iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.contentWindow.min.js", this.uri).href
+    private static iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.child.js", this.uri).href
 
     private readonly uuid: string = uuid(16)
 
@@ -35,7 +35,7 @@ export default class P5JSPreview extends CodeProviderPreview {
     private get id(): string { return `p5js-preview-${this.uuid}` }
 
     public get style():         CSSStyleDeclaration { return this.container.style }
-    public get iFrameResizer(): IFramePage | undefined     { return (this.iframe as any).iFrameResizer }
+    public get iFrameResizer(): { close(): void } | undefined { return (this.iframe as any).iFrameResizer }
 
     private readonly padding:   number
     private readonly minWidth:  number
@@ -261,17 +261,16 @@ export default class P5JSPreview extends CodeProviderPreview {
             }
         }
 
-        // NOTE: The cast to any hides a mistake (onResized does not exist), but onResized and onMessage ARE indeed the correct names. The types of iframe-resizer just have not been updated yet...
-        // TODO: Remove 'as any' as soon as types have been updated!
-        this.iframe = iframeResizer({    
-                                        /*log: true,*/ 
-                                        checkOrigin: [P5JSPreview.url.origin], 
-                                        sizeWidth: true, 
-                                        widthCalculationMethod: "taggedElement",
+        // GPLv3 acknowledges use under iframe-resizer's open-source license (see https://iframe-resizer.com).
+        this.iframe = iframeResize({
+                                        /*log: true,*/
+                                        license: "GPLv3",
+                                        checkOrigin: [P5JSPreview.url.origin],
+                                        direction: "both",
                                         tolerance: 20, // used to avoid recursive resizing loop over small inaccuracies in size,
                                         onResized: onResize,
                                         onMessage: onError,
-                                   } as any, `#${this.id}`)[0]
+                                   }, `#${this.id}`)[0]
 
         this.resizeObserver = new ResizeObserver(() => {
             if (!this.hasErrorMessage) {

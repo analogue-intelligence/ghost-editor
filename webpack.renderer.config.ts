@@ -29,8 +29,7 @@ export const rendererConfig: Configuration = {
         new CopyPlugin({
             patterns: [
                 { from: 'src/libs/p5js/p5.min.js', to: 'libs/p5js' },
-                { from: 'node_modules/iframe-resizer/js/iframeResizer.contentWindow.min.js', to: 'libs/iframe-resizer' },
-                { from: 'node_modules/iframe-resizer/js/iframeResizer.contentWindow.map', to: 'libs/iframe-resizer' }
+                { from: 'node_modules/@iframe-resizer/child/index.umd.js', to: 'libs/iframe-resizer/iframeResizer.child.js' }
             ],
         }),
         // This sets up the workers needed for the monaco-editor automatically. Currently, this seems to interfer with the native_modules loader in webpack.rules.ts, so the loader was disabled.

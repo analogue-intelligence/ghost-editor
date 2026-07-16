@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import IframeResizer, { IFrameComponent } from 'iframe-resizer-react'
+import IframeResizer from '@iframe-resizer/react'
 import ReactMarkdown from 'react-markdown';
 
 import Synchronizer from "../../../utils/synchronizer"
@@ -8,13 +8,12 @@ import { throttle } from "../../../utils/helpers"
 
 import "./react-p5js-preview.css"
 import LoadingView from '../../react/loadingView';
-import { IFramePage } from 'iframe-resizer';
 import PixelRuler, { PixelRulerHandle } from './pixel-ruler';
 
 const uri                 = document.baseURI
 const url                 = new URL("", uri)
 const p5jsScript          = new URL("./libs/p5js/p5.min.js", uri).href
-const iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.contentWindow.min.js", uri).href
+const iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.child.js", uri).href
 
 const previewPadding = 5
 const rulerThickness = 22
@@ -245,7 +244,7 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
     const isMounted = useRef(true);
 
     const previewContainerRef   = useRef<HTMLDivElement | null>(null)
-    const iframeRef             = useRef<IFramePage | null>(null)
+    const iframeRef             = useRef<IframeResizer.IFrameForwardRef | null>(null)
     const latestSketchId        = useRef<number>(0)
     const lastWorkingSketch     = useRef<{ sketchId: number, code: string } | undefined>(undefined)
     const runtimeRecoverySketch = useRef<{ sketchId: number, code: string } | undefined>(undefined)
@@ -325,7 +324,8 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         return () => {
             isMounted.current = false
             observer.disconnect()
-            iframeRef.current?.close()
+            // @iframe-resizer/react's forwardRef no longer exposes close() -- removing the
+            // iframe from the DOM (which this unmount is about to do) tears it down instead.
             sync.dispose()
         };
     }, []);
@@ -371,7 +371,7 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         if (lastCursorPos.current) { updateCursorIndicators(lastCursorPos.current.x, lastCursorPos.current.y) }
     }, [sketchLayout])
 
-    function onMessage({ iframe, message: { sketchId, type, message }}: { iframe: IFrameComponent, message: { type: string, sketchId: number, message: any } }): void {
+    function onMessage({ iframe, message: { sketchId, type, message }}: { iframe: IframeResizer.IFrameComponent, message: { type: string, sketchId: number, message: any } }): void {
 
         if (type === "resize") {
             iframe.style.width  = `${message.maxWidth}px`
@@ -456,13 +456,14 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
                 />}
 
                 <div ref={previewContainerRef}
-                     style={{ position: 'relative', gridRow: 2, gridColumn: 2, padding: 5, border: "1px solid black" }}>
+                     style={{ position: 'relative', gridRow: 2, gridColumn: 2, minWidth: 0, minHeight: 0, padding: 5, border: "1px solid black" }}>
 
                     {isMounted && iframeSource && <IframeResizer
                         forwardRef={iframeRef}
                         src={iframeSource}
+                        license="GPLv3"
                         checkOrigin={[url.origin]}
-                        sizeWidth={true}
+                        direction="none"
                         onMessage={onMessage}
                     />}
 
