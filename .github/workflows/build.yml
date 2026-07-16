@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg fakeroot rpm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run make
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-editor-${{ matrix.os }}
+          path: out/make/**
+          if-no-files-found: error
