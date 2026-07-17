@@ -61,7 +61,6 @@ export default abstract class VCSServer<SessionFile extends ISessionFile, Sessio
     }
 
     public waitForCurrentRequests(request: VCSSessionRequest<void>): Promise<VCSResponse<void>> {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         return this.resources.createQuery(request, VCSOperation.WaitForCurrentRequests, () => {})
     }
 

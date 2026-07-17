@@ -9,7 +9,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint ."
   },
   "keywords": [
     "creative coding",
@@ -30,21 +30,23 @@
     "@electron-forge/maker-zip": "^6.2.1",
     "@electron-forge/plugin-auto-unpack-natives": "^6.2.1",
     "@electron-forge/plugin-webpack": "^6.2.1",
+    "@eslint/js": "^9.39.5",
     "@types/node": "^20.4.4",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
+    "@typescript-eslint/parser": "^8.64.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^5.2.7",
     "electron": "25.3.1",
-    "eslint": "^8.45.0",
-    "eslint-plugin-import": "^2.27.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-import": "^2.32.0",
     "fork-ts-checker-webpack-plugin": "^7.3.0",
+    "globals": "^17.7.0",
     "node-loader": "^2.0.0",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
-    "typescript": "~5.3.3"
+    "typescript": "~5.3.3",
+    "typescript-eslint": "^8.64.0"
   },
   "dependencies": {
     "@iframe-resizer/child": "^5.5.9",
