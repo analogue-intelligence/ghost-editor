@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- this config file is plain CommonJS */
 const js = require('@eslint/js');
 const tseslint = require('typescript-eslint');
-const importPlugin = require('eslint-plugin-import');
+const importPlugin = require('eslint-plugin-import-x');
 const globals = require('globals');
 
 module.exports = tseslint.config(

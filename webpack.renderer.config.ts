@@ -4,7 +4,6 @@ import path from 'path';
 import { rules } from './webpack.rules.ts';
 import { plugins } from './webpack.plugins.ts';
 
-// eslint-disable-next-line import/default
 import CopyPlugin from 'copy-webpack-plugin';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 
