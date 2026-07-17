@@ -166,7 +166,7 @@ export default abstract class VCSServer<SessionFile extends ISessionFile, Sessio
     }
 
     public updateBlock(request: VCSSessionRequest<{ blockId: VCSBlockId, update: VCSBlockUpdate }>): Promise<VCSResponse<void>> {
-        throw new Error("Currently, blocks cannot be updated because its unused and I cannot be bothered to actually implement that nightmare.")
+        throw new Error("Currently, blocks cannot be updated because its unused and I cannot be bothered to actually implement that nightmare." + request)
     }
 
     public async syncBlocks(request: VCSSessionRequest<{ source: VCSBlockId; target: VCSBlockId; }>): Promise<VCSResponse<string>> {

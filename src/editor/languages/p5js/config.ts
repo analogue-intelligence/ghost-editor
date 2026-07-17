@@ -116,7 +116,7 @@ function setupAutocomplete(): void {
 
     typeDefinitions.keys().forEach((relativePath: string) => {
         const content = typeDefinitions(relativePath).default
-        monaco.languages.typescript.javascriptDefaults.addExtraLib(content, 'ts:' + relativePath.substring(2));
+        monaco.typescript.javascriptDefaults.addExtraLib(content, 'ts:' + relativePath.substring(2));
     });
 }
 

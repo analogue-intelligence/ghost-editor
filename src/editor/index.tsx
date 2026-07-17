@@ -604,6 +604,7 @@ export default class GhostEditor extends View implements ReferenceProvider, Code
         const container = document.createElement("div")
         container.style.boxSizing = "border-box"
         container.style.flex      = `${flex}`
+        container.style.minWidth  = "0" // flex items default to min-width: auto, which blocks shrinking below content's intrinsic width
         container.style.height    = "100%"
         container.style.padding   = "0 0"
         container.style.margin    = "0 0"
