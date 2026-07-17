@@ -52,7 +52,6 @@
   "dependencies": {
     "@iframe-resizer/child": "^5.5.9",
     "@iframe-resizer/parent": "^5.5.9",
-    "@iframe-resizer/react": "^5.5.9",
     "@prisma/client": "^5.0.0",
     "@types/p5": "^1.6.2",
     "@types/react": "^18.2.16",

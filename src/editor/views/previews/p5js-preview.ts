@@ -264,8 +264,12 @@ export default class P5JSPreview extends CodeProviderPreview {
         }
 
         // GPLv3 acknowledges use under iframe-resizer's open-source license (see https://iframe-resizer.com).
+        // Explicit id: @iframe-resizer/core auto-generates a connection id shared across every
+        // iframeResize()/<IframeResizer> instance on the page (including the main React preview),
+        // and reusing an id across an old (destroyed) and new (just-mounted) connection is unsafe.
         this.iframe = iframeResize({
                                         /*log: true,*/
+                                        id: this.id,
                                         license: "GPLv3",
                                         checkOrigin: [P5JSPreview.url.origin],
                                         direction: "both",
