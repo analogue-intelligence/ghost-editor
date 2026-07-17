@@ -12,8 +12,10 @@ import PixelRuler, { PixelRulerHandle } from './pixel-ruler';
 
 const uri                 = document.baseURI
 const url                 = new URL("", uri)
-const p5jsScript          = new URL("./libs/p5js/p5.min.js", uri).href
-const iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.child.js", uri).href
+// Root-relative (leading slash) so this resolves against the origin regardless of the current
+// page's own path -- Electron Forge's dev server entry URL shape isn't something to rely on.
+const p5jsScript          = new URL("/libs/p5js/p5.min.js", uri).href
+const iframeResizerScript = new URL("/libs/iframe-resizer/iframeResizer.child.js", uri).href
 
 const previewPadding = 5
 const rulerThickness = 22

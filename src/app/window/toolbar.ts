@@ -11,10 +11,11 @@ const toolbarTemplate = [
                 accelerator: process.platform === 'darwin' ? 'Cmd+N' : 'Ctrl+N',
                 click: (menuItem, browserWindow) => {
                     // TODO: Not sure if this is the desired default, but it works for this prototype
-                    file.createFile(browserWindow, p5jsDefaultCode)
+                    const window = browserWindow as BrowserWindow
+                    file.createFile(window, p5jsDefaultCode)
                         .then(response => {
                             if (response) {
-                                browserWindow.webContents.send('menu-load-file', response)
+                                window.webContents.send('menu-load-file', response)
                             }
                         })
                 }
@@ -23,10 +24,11 @@ const toolbarTemplate = [
                 label: 'Open File...',
                 accelerator: process.platform === 'darwin' ? 'Cmd+O' : 'Ctrl+O',
                 click: (menuItem, browserWindow) => {
-                    file.openFile(browserWindow)
+                    const window = browserWindow as BrowserWindow
+                    file.openFile(window)
                         .then(response => {
                             if (response) {
-                                browserWindow.webContents.send('menu-load-file', response)
+                                window.webContents.send('menu-load-file', response)
                             }
                         })
                 }
@@ -35,7 +37,7 @@ const toolbarTemplate = [
                 label: 'Save',
                 accelerator: process.platform === 'darwin' ? 'Cmd+S' : 'Ctrl+S',
                 click: (menuItem, browserWindow) => {
-                    browserWindow.webContents.send('menu-save')
+                    (browserWindow as BrowserWindow).webContents.send('menu-save')
                 }
             },
             {
@@ -65,7 +67,7 @@ const toolbarTemplate = [
                 checked: true,
                 accelerator: process.platform === 'darwin' ? 'Cmd+R' : 'Ctrl+R',
                 click: (menuItem, browserWindow) => {
-                    browserWindow.webContents.send('menu-toggle-rulers', menuItem.checked)
+                    (browserWindow as BrowserWindow).webContents.send('menu-toggle-rulers', menuItem.checked)
                 }
             }
         ]

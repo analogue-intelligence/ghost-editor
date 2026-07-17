@@ -11,8 +11,10 @@ export default class P5JSPreview extends CodeProviderPreview {
 
     private static uri                 = document.baseURI
     private static url                 = new URL("", this.uri)
-    private static p5jsScript          = new URL("./libs/p5js/p5.min.js", this.uri).href
-    private static iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.child.js", this.uri).href
+    // Root-relative (leading slash) so this resolves against the origin regardless of the current
+    // page's own path -- Electron Forge's dev server entry URL shape isn't something to rely on.
+    private static p5jsScript          = new URL("/libs/p5js/p5.min.js", this.uri).href
+    private static iframeResizerScript = new URL("/libs/iframe-resizer/iframeResizer.child.js", this.uri).href
 
     private readonly uuid: string = uuid(16)
 
