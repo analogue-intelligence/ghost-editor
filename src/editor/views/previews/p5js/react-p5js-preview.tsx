@@ -409,14 +409,12 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
             return
         }
 
-        iframe.style.transform = "translate(-50%, -50%)"
-
         if (sketchId !== latestSketchId.current) { return }
 
         if (type !== "success" && type !== "syntax-error" && type !== "runtime-error") {
             throw new Error(`"${type}" is not a valid message type for the P5JSPreview!`)
         }
-        
+
         if (type === "success") {
             runtimeRecoverySketch.current = lastWorkingSketch.current
             lastWorkingSketch.current     = { sketchId, code: message.code }
@@ -427,6 +425,11 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         }
 
         if (type === "syntax-error" || type === "runtime-error") {
+            // The sketch may not have rendered a canvas at all in an error state, so the scale
+            // established by the last successful resize is not meaningful here -- reset to a
+            // plain, unscaled centered position instead.
+            iframe.style.transform = "translate(-50%, -50%)"
+
             const description = message.description
             const stack       = message.stack
             setErrorMessage(`${type === "syntax-error" ? "Syntax" : "Runtime"} Error:\n${description}` + (stack && parseInt(iframe.style.height) > 300 ? `\n\nStack:\n${stack}` : ""))
