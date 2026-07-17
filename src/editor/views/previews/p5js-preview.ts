@@ -212,10 +212,10 @@ export default class P5JSPreview extends CodeProviderPreview {
                     window.addEventListener("load", event => {
                         const p5Canvas = document.getElementsByClassName("p5Canvas")
                         if (p5Canvas.length > 0) {
-                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-width", "") }
+                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-size", "") }
                         } else {
                             const sizingDiv = document.createElement("div")
-                            sizingDiv.setAttribute("data-iframe-width", "")
+                            sizingDiv.setAttribute("data-iframe-size", "")
                             document.body.appendChild(sizingDiv)
                         }
                     })
