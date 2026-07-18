@@ -11,9 +11,11 @@ import PixelRuler, { PixelRulerHandle } from './pixel-ruler';
 
 const uri        = document.baseURI
 const url        = new URL("", uri)
-// Root-relative (leading slash) so this resolves against the origin regardless of the current
-// page's own path -- Electron Forge's dev server entry URL shape isn't something to rely on.
-const p5jsScript = new URL("/libs/p5js/p5.min.js", uri).href
+// Relative to main_window/index.html's own directory, since libs/ is its sibling under
+// .webpack/renderer/ in both dev and packaged builds. A root-relative (leading slash) path
+// resolves against the dev server's origin correctly, but resolves to the filesystem root
+// (and 404s) once the page is loaded via file:// in a packaged app.
+const p5jsScript = new URL("../libs/p5js/p5.min.js", uri).href
 
 const previewPadding = 5
 const rulerThickness = 22
@@ -384,9 +386,14 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
 
     function onMessage(event: MessageEvent): void {
         const iframe = iframeRef.current
-        // Only accept messages from our own current iframe, from the expected origin -- the
-        // same-origin/same-instance check that checkOrigin + the connection id used to provide.
-        if (!iframe || event.source !== iframe.contentWindow || event.origin !== url.origin) { return }
+        // Only accept messages from our own current iframe -- checking event.source's identity
+        // against iframe.contentWindow is already an unspoofable guarantee on its own. An
+        // event.origin comparison doesn't add anything reliable on top of that: the iframe's
+        // content is a blob: URL, and blob: URLs get an opaque ("null") origin when created from
+        // a file:// page (as in a packaged app), while the parent's own origin serializes to the
+        // literal string "file://" - two different, unrelated values that can never match, so
+        // that comparison would silently drop every message once packaged.
+        if (!iframe || event.source !== iframe.contentWindow) { return }
 
         const { sketchId, type, message } = event.data
 

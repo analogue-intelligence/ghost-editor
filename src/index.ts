@@ -1,8 +1,13 @@
-import { appPath, isDev } from "./utils/environment";
+import { isDev } from "./utils/environment";
 import { config } from "dotenv"
 import path from 'path';
 
-config({ path: path.join(appPath, ".env") })
+// __dirname (not appPath) always matches where webpack's CopyPlugin actually places .env:
+// alongside index.js. appPath is the asar root in production, which is one level higher
+// than that - dotenv would silently fail to find any .env there and OPENAI_API_KEY would
+// never get set. This only "worked" in dev by accident, since dev's appPath happens to be
+// the project root, which also has the original (uncopied) .env at its top level.
+config({ path: path.join(__dirname, ".env") })
 
 import { app, BrowserWindow } from 'electron';
 import setupToolbar from './app/window/toolbar';
@@ -35,7 +40,7 @@ const createWindow = async (): Promise<void> => {
     });
 
     setupToolbar(mainWindow)
-    
+
     await configureDatabase()
     await TimestampProvider.setup()
     new LocalDatabaseVCSServer(mainWindow)
