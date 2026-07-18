@@ -1,6 +1,6 @@
 {
   "name": "ghost-editor",
-  "productName": "ghost-editor",
+  "productName": "Ghost IDE",
   "version": "1.0.0",
   "description": "This is a creative coding IDE that supports exploratory versioning",
   "main": ".webpack/main",
