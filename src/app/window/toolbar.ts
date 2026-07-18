@@ -58,6 +58,17 @@ const toolbarTemplate = [
         ]
     }),
     new MenuItem({
+        label: 'Versioning',
+        submenu: [
+            {
+                label: 'Show Versions',
+                click: (menuItem, browserWindow) => {
+                    (browserWindow as BrowserWindow).webContents.send('menu-show-versions')
+                }
+            }
+        ]
+    }),
+    new MenuItem({
         label: 'View',
         submenu: [
             {

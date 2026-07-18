@@ -630,6 +630,12 @@ export default class GhostEditor extends View implements ReferenceProvider, Code
             window.ipcRenderer.on('menu-save' ,            ()                        => this.save())
             window.ipcRenderer.on('menu-update-file-path', (filePath: string)        => this.getSession().updateFilePath(filePath))
         }
+
+        if (this.sideViewEnabled) {
+            // Triggers the same Monaco action the "Alt+X" keybinding runs (see setupKeybindings),
+            // rather than duplicating its snapshot-selection logic here.
+            window.ipcRenderer.on('menu-show-versions', () => this.core.getAction("ghost-show-versions")?.run())
+        }
     }
 
     private async setupSideView(): Promise<void> {
