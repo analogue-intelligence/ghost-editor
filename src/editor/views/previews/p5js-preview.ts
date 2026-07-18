@@ -11,10 +11,12 @@ export default class P5JSPreview extends CodeProviderPreview {
 
     private static uri                 = document.baseURI
     private static url                 = new URL("", this.uri)
-    // Root-relative (leading slash) so this resolves against the origin regardless of the current
-    // page's own path -- Electron Forge's dev server entry URL shape isn't something to rely on.
-    private static p5jsScript          = new URL("/libs/p5js/p5.min.js", this.uri).href
-    private static iframeResizerScript = new URL("/libs/iframe-resizer/iframeResizer.child.js", this.uri).href
+    // Relative to main_window/index.html's own directory, since libs/ is its sibling under
+    // .webpack/renderer/ in both dev and packaged builds. A root-relative (leading slash) path
+    // resolves against the dev server's origin correctly, but resolves to the filesystem root
+    // (and 404s) once the page is loaded via file:// in a packaged app.
+    private static p5jsScript          = new URL("../libs/p5js/p5.min.js", this.uri).href
+    private static iframeResizerScript = new URL("../libs/iframe-resizer/iframeResizer.child.js", this.uri).href
 
     private readonly uuid: string = uuid(16)
 
