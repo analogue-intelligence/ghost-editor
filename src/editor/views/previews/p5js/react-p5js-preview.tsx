@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react'
-import IframeResizer, { IFrameComponent } from 'iframe-resizer-react'
 import ReactMarkdown from 'react-markdown';
 
 import Synchronizer from "../../../utils/synchronizer"
@@ -8,13 +7,15 @@ import { throttle } from "../../../utils/helpers"
 
 import "./react-p5js-preview.css"
 import LoadingView from '../../react/loadingView';
-import { IFramePage } from 'iframe-resizer';
 import PixelRuler, { PixelRulerHandle } from './pixel-ruler';
 
-const uri                 = document.baseURI
-const url                 = new URL("", uri)
-const p5jsScript          = new URL("./libs/p5js/p5.min.js", uri).href
-const iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.contentWindow.min.js", uri).href
+const uri        = document.baseURI
+const url        = new URL("", uri)
+// Relative to main_window/index.html's own directory, since libs/ is its sibling under
+// .webpack/renderer/ in both dev and packaged builds. A root-relative (leading slash) path
+// resolves against the dev server's origin correctly, but resolves to the filesystem root
+// (and 404s) once the page is loaded via file:// in a packaged app.
+const p5jsScript = new URL("../libs/p5js/p5.min.js", uri).href
 
 const previewPadding = 5
 const rulerThickness = 22
@@ -54,16 +55,10 @@ function getHtml(sketchId: number, code: string): string {
 
             <script>
                 const code = ${JSON.stringify(code)}
-
-                let preparedMessage = undefined
+                const parentOrigin = ${JSON.stringify(url.origin)}
 
                 function sendMessage(type, message) {
-                    const iframe = window.parentIFrame
-                    if (iframe) {
-                        iframe.sendMessage({ sketchId: ${sketchId}, type, message })
-                    } else {
-                        preparedMessage = { type, message }
-                    }
+                    window.parent.postMessage({ sketchId: ${sketchId}, type, message }, parentOrigin)
                 }
 
                 function sendSuccessMessage() {
@@ -124,23 +119,12 @@ function getHtml(sketchId: number, code: string): string {
                     })
                 })()
 
-                //window.addEventListener("load",   () => scaleCanvases())
-                //window.addEventListener("resize", () => scaleCanvases())
-
-                // setup config object of iFrameResizer
-                window.iFrameResizer = {
-                    onReady: () => { 
-                        if (preparedMessage) { sendMessage(preparedMessage.type, preparedMessage.message) }
-                        scaleCanvases()
-                    },
-                    onMessage: message => {
-                        if (message === "resize") { scaleCanvases() }
-                        else                      { throw new Error('"' + message + '" is not an accepted message event!') }
-                    }
-                }
+                // The container's own size lives entirely on the parent side, so the only thing
+                // this side ever needs to report is its own canvas size -- once on load (p5.js
+                // creates the canvas as part of its own load-triggered setup() call), which is
+                // all the parent needs to compute and keep the scale/position up to date itself.
+                window.addEventListener("load", () => scaleCanvases())
             </script>
-
-            <script src="${iframeResizerScript}"></script>
 
             <script>
                 let pauseTimeoutId = undefined
@@ -245,7 +229,7 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
     const isMounted = useRef(true);
 
     const previewContainerRef   = useRef<HTMLDivElement | null>(null)
-    const iframeRef             = useRef<IFramePage | null>(null)
+    const iframeRef             = useRef<HTMLIFrameElement | null>(null)
     const latestSketchId        = useRef<number>(0)
     const lastWorkingSketch     = useRef<{ sketchId: number, code: string } | undefined>(undefined)
     const runtimeRecoverySketch = useRef<{ sketchId: number, code: string } | undefined>(undefined)
@@ -305,27 +289,28 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
             }
         })
 
+        // The container's own size is only ever known on this (parent) side, and the canvas's
+        // size only changes when the user's code changes createCanvas(...) -- which arrives
+        // through the resize message from the child, not through a container resize. So a
+        // container resize never actually needs a round trip to the child at all; the scale
+        // factor can be recomputed directly from the last known canvas size.
         const observer = new ResizeObserver(() => {
-            if (isMounted.current && iframeRef.current) {
-                try {
-                    iframeRef.current.sendMessage("resize")
-                } catch {
-                    // due to timing issues, this sometimes triggers after or before an iframe is ready to recieve sendMessage
-                    console.warn("iFrame not (yet) setup.")
-                }
+            const previewContainer = previewContainerRef.current
+            const layout = sketchLayoutRef.current
+            if (isMounted.current && previewContainer && iframeRef.current && layout) {
+                applyLayout(iframeRef.current, previewContainer, layout.maxWidth, layout.maxHeight)
             }
         })
-      
+
         if (previewContainerRef.current) {
             observer.observe(previewContainerRef.current);
         }
 
         codeProvider.getCode().then(code => { if (code) { updateSketchThrottled(code) } })
-    
+
         return () => {
             isMounted.current = false
             observer.disconnect()
-            iframeRef.current?.close()
             sync.dispose()
         };
     }, []);
@@ -371,32 +356,50 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         if (lastCursorPos.current) { updateCursorIndicators(lastCursorPos.current.x, lastCursorPos.current.y) }
     }, [sketchLayout])
 
-    function onMessage({ iframe, message: { sketchId, type, message }}: { iframe: IFrameComponent, message: { type: string, sketchId: number, message: any } }): void {
+    // Recomputes and applies the iframe's scale/position for the given canvas size against the
+    // container's current size. Shared by the resize message handler (canvas size changed) and
+    // the container ResizeObserver (container size changed, canvas size unchanged) -- the latter
+    // never needs a round trip to the child, since the container's size is only ever known here.
+    function applyLayout(iframe: HTMLIFrameElement, previewContainer: HTMLDivElement, maxWidth: number, maxHeight: number): void {
+        iframe.style.width  = `${maxWidth}px`
+        iframe.style.height = `${maxHeight}px`
+
+        if (maxWidth > 0 && maxHeight > 0) {
+            const computedStyle   = getComputedStyle(previewContainer)
+            const containerWidth  = parseFloat(computedStyle.width)
+            const containerHeight = parseFloat(computedStyle.height)
+            const scaleFactor     = Math.min(containerWidth / maxWidth, containerHeight / maxHeight)
+
+            iframe.style.transform = `scale(${scaleFactor}) translate(-50%, -50%)`
+
+            setSketchLayout({
+                scaleFactor,
+                maxWidth,
+                maxHeight,
+                iframeLeft: containerWidth  / 2 - (maxWidth  * scaleFactor) / 2,
+                iframeTop:  containerHeight / 2 - (maxHeight * scaleFactor) / 2
+            })
+        } else {
+            console.warn("Cannot access container size for iframe!")
+        }
+    }
+
+    function onMessage(event: MessageEvent): void {
+        const iframe = iframeRef.current
+        // Only accept messages from our own current iframe -- checking event.source's identity
+        // against iframe.contentWindow is already an unspoofable guarantee on its own. An
+        // event.origin comparison doesn't add anything reliable on top of that: the iframe's
+        // content is a blob: URL, and blob: URLs get an opaque ("null") origin when created from
+        // a file:// page (as in a packaged app), while the parent's own origin serializes to the
+        // literal string "file://" - two different, unrelated values that can never match, so
+        // that comparison would silently drop every message once packaged.
+        if (!iframe || event.source !== iframe.contentWindow) { return }
+
+        const { sketchId, type, message } = event.data
 
         if (type === "resize") {
-            iframe.style.width  = `${message.maxWidth}px`
-            iframe.style.height = `${message.maxHeight}px`
-
             const previewContainer = previewContainerRef.current
-            if (previewContainer && message.maxWidth > 0 && message.maxHeight > 0) {
-                const computedStyle   = getComputedStyle(previewContainer)
-                const containerWidth  = parseFloat(computedStyle.width)
-                const containerHeight = parseFloat(computedStyle.height)
-                const scaleFactor     = Math.min(containerWidth / message.maxWidth, containerHeight / message.maxHeight)
-
-                iframe.style.transform = `scale(${scaleFactor}) translate(-50%, -50%)`
-
-                setSketchLayout({
-                    scaleFactor,
-                    maxWidth:   message.maxWidth,
-                    maxHeight:  message.maxHeight,
-                    iframeLeft: containerWidth  / 2 - (message.maxWidth  * scaleFactor) / 2,
-                    iframeTop:  containerHeight / 2 - (message.maxHeight * scaleFactor) / 2
-                })
-            } else if (!previewContainer) {
-                console.warn("Cannot access container size for iframe!")
-            }
-
+            if (previewContainer) { applyLayout(iframe, previewContainer, message.maxWidth, message.maxHeight) }
             return
         }
 
@@ -407,14 +410,12 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
             return
         }
 
-        iframe.style.transform = "translate(-50%, -50%)"
-
         if (sketchId !== latestSketchId.current) { return }
 
         if (type !== "success" && type !== "syntax-error" && type !== "runtime-error") {
             throw new Error(`"${type}" is not a valid message type for the P5JSPreview!`)
         }
-        
+
         if (type === "success") {
             runtimeRecoverySketch.current = lastWorkingSketch.current
             lastWorkingSketch.current     = { sketchId, code: message.code }
@@ -425,12 +426,22 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
         }
 
         if (type === "syntax-error" || type === "runtime-error") {
+            // The sketch may not have rendered a canvas at all in an error state, so the scale
+            // established by the last successful resize is not meaningful here -- reset to a
+            // plain, unscaled centered position instead.
+            iframe.style.transform = "translate(-50%, -50%)"
+
             const description = message.description
             const stack       = message.stack
             setErrorMessage(`${type === "syntax-error" ? "Syntax" : "Runtime"} Error:\n${description}` + (stack && parseInt(iframe.style.height) > 300 ? `\n\nStack:\n${stack}` : ""))
             renderLastWorkingSketch()
         }
     }
+
+    useEffect(() => {
+        window.addEventListener("message", onMessage)
+        return () => window.removeEventListener("message", onMessage)
+    }, [])
 
     return (
         <div className="container" style={{ padding: previewPadding }}>
@@ -456,14 +467,11 @@ const P5JSPreview: React.FC<P5JSPreviewProps> = ({ synchronizer, codeProvider, h
                 />}
 
                 <div ref={previewContainerRef}
-                     style={{ position: 'relative', gridRow: 2, gridColumn: 2, padding: 5, border: "1px solid black" }}>
+                     style={{ position: 'relative', gridRow: 2, gridColumn: 2, minWidth: 0, minHeight: 0, padding: 5, border: "1px solid black" }}>
 
-                    {isMounted && iframeSource && <IframeResizer
-                        forwardRef={iframeRef}
+                    {isMounted && iframeSource && <iframe
+                        ref={iframeRef}
                         src={iframeSource}
-                        checkOrigin={[url.origin]}
-                        sizeWidth={true}
-                        onMessage={onMessage}
                     />}
 
                     {errorMessage && <div style={{

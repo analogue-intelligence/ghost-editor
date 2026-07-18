@@ -3,7 +3,7 @@ import Synchronizer, { Synchronizable } from "../../utils/synchronizer";
 import { Disposable } from "../../data-types/convenience/monaco";
 import uuid from "../../utils/uuid";
 import { CodeProvider, CodeProviderPreview } from "./preview";
-import { iframeResizer, IFramePage } from "iframe-resizer"
+import iframeResize from "@iframe-resizer/parent"
 
 // TODO: Should be replaced from here: https://github.com/processing/p5.js-web-editor/tree/develop/client/modules/Preview
 
@@ -11,8 +11,12 @@ export default class P5JSPreview extends CodeProviderPreview {
 
     private static uri                 = document.baseURI
     private static url                 = new URL("", this.uri)
-    private static p5jsScript          = new URL("./libs/p5js/p5.min.js", this.uri).href
-    private static iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.contentWindow.min.js", this.uri).href
+    // Relative to main_window/index.html's own directory, since libs/ is its sibling under
+    // .webpack/renderer/ in both dev and packaged builds. A root-relative (leading slash) path
+    // resolves against the dev server's origin correctly, but resolves to the filesystem root
+    // (and 404s) once the page is loaded via file:// in a packaged app.
+    private static p5jsScript          = new URL("../libs/p5js/p5.min.js", this.uri).href
+    private static iframeResizerScript = new URL("../libs/iframe-resizer/iframeResizer.child.js", this.uri).href
 
     private readonly uuid: string = uuid(16)
 
@@ -35,7 +39,7 @@ export default class P5JSPreview extends CodeProviderPreview {
     private get id(): string { return `p5js-preview-${this.uuid}` }
 
     public get style():         CSSStyleDeclaration { return this.container.style }
-    public get iFrameResizer(): IFramePage | undefined     { return (this.iframe as any).iFrameResizer }
+    public get iFrameResizer(): { close(): void } | undefined { return (this.iframe as any).iFrameResizer }
 
     private readonly padding:   number
     private readonly minWidth:  number
@@ -210,10 +214,10 @@ export default class P5JSPreview extends CodeProviderPreview {
                     window.addEventListener("load", event => {
                         const p5Canvas = document.getElementsByClassName("p5Canvas")
                         if (p5Canvas.length > 0) {
-                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-width", "") }
+                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-size", "") }
                         } else {
                             const sizingDiv = document.createElement("div")
-                            sizingDiv.setAttribute("data-iframe-width", "")
+                            sizingDiv.setAttribute("data-iframe-size", "")
                             document.body.appendChild(sizingDiv)
                         }
                     })
@@ -261,17 +265,20 @@ export default class P5JSPreview extends CodeProviderPreview {
             }
         }
 
-        // NOTE: The cast to any hides a mistake (onResized does not exist), but onResized and onMessage ARE indeed the correct names. The types of iframe-resizer just have not been updated yet...
-        // TODO: Remove 'as any' as soon as types have been updated!
-        this.iframe = iframeResizer({    
-                                        /*log: true,*/ 
-                                        checkOrigin: [P5JSPreview.url.origin], 
-                                        sizeWidth: true, 
-                                        widthCalculationMethod: "taggedElement",
+        // GPLv3 acknowledges use under iframe-resizer's open-source license (see https://iframe-resizer.com).
+        // Explicit id: @iframe-resizer/core auto-generates a connection id shared across every
+        // iframeResize()/<IframeResizer> instance on the page (including the main React preview),
+        // and reusing an id across an old (destroyed) and new (just-mounted) connection is unsafe.
+        this.iframe = iframeResize({
+                                        /*log: true,*/
+                                        id: this.id,
+                                        license: "GPLv3",
+                                        checkOrigin: [P5JSPreview.url.origin],
+                                        direction: "both",
                                         tolerance: 20, // used to avoid recursive resizing loop over small inaccuracies in size,
                                         onResized: onResize,
                                         onMessage: onError,
-                                   } as any, `#${this.id}`)[0]
+                                   }, `#${this.id}`)[0]
 
         this.resizeObserver = new ResizeObserver(() => {
             if (!this.hasErrorMessage) {

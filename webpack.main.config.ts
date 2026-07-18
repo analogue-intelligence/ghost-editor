@@ -2,7 +2,6 @@ import type { Configuration } from 'webpack';
 
 import { rules } from './webpack.rules.ts';
 
-// eslint-disable-next-line import/default
 import CopyPlugin from 'copy-webpack-plugin';
 import path from 'path';
 

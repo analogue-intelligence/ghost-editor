@@ -698,7 +698,7 @@ export class VCSBlockSession {
     }
 
     private constructor(hostSession: VCSSession, block: VCSBlockId, isRootBlock: boolean) {
-        this.session     = hostSession,
+        this.session     = hostSession
         this.block       = block
         this.isRootBlock = isRootBlock
     }

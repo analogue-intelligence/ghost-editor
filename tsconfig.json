@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "target": "ES6",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
         "allowJs": true,
         "module": "commonjs",
         "skipLibCheck": true,
@@ -9,13 +10,20 @@
         "sourceMap": true,
         "baseUrl": ".",
         "outDir": "dist",
+        "rootDir": "./src",
         "moduleResolution": "node",
         "resolveJsonModule": true,
-        "downlevelIteration": true,
         "jsx": "react",
+        "strict": false,
+        "types": ["*"],
+        // baseUrl and moduleResolution:node are deprecated in TS 6.0 and removed in 7.0. Migrating
+        // off them means moving this project's module output from CommonJS to ESM (moduleResolution
+        // "bundler"/"nodenext" require it) - a separate, much larger change than a version bump.
+        "ignoreDeprecations": "6.0",
         "paths": {
             "*": ["node_modules/*"]
         }
     },
-    "include": ["src/**/*"]
+    "include": ["src/**/*"],
+    "exclude": ["src/libs/p5js/**"]
 }
