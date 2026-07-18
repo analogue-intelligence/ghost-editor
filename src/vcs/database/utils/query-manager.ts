@@ -38,7 +38,6 @@ class Query<QueryData, QueryResult, SessionFile extends ISessionFile, SessionLin
         this.manager.queryRunning(this)
         const requestId = this.requestId
 
-        // eslint-disable-next-line no-useless-catch
         try {
             const response = await this.query(this.session, this.data)
             this.manager.queryFinished(this)

@@ -125,7 +125,7 @@ export default class LineProxy extends DatabaseProxy implements ISessionLine {
     public async updateContent(sourceBlock: BlockProxy, content: string): Promise<VersionProxy> {
         const currentHead = this.getHeadFor(sourceBlock)
         if (TimestampProvider.getLastTimestamp() === currentHead.timestamp && currentHead.content.trimEnd() === content.trimEnd()) {
-            currentHead
+            return currentHead
         } else {
             //await this.validateHead(sourceBlock)
             return await this.createNextVersion(sourceBlock, true, content)

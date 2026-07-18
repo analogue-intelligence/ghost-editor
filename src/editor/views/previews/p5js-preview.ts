@@ -11,8 +11,10 @@ export default class P5JSPreview extends CodeProviderPreview {
 
     private static uri                 = document.baseURI
     private static url                 = new URL("", this.uri)
-    private static p5jsScript          = new URL("./libs/p5js/p5.min.js", this.uri).href
-    private static iframeResizerScript = new URL("./libs/iframe-resizer/iframeResizer.child.js", this.uri).href
+    // Root-relative (leading slash) so this resolves against the origin regardless of the current
+    // page's own path -- Electron Forge's dev server entry URL shape isn't something to rely on.
+    private static p5jsScript          = new URL("/libs/p5js/p5.min.js", this.uri).href
+    private static iframeResizerScript = new URL("/libs/iframe-resizer/iframeResizer.child.js", this.uri).href
 
     private readonly uuid: string = uuid(16)
 
@@ -210,10 +212,10 @@ export default class P5JSPreview extends CodeProviderPreview {
                     window.addEventListener("load", event => {
                         const p5Canvas = document.getElementsByClassName("p5Canvas")
                         if (p5Canvas.length > 0) {
-                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-width", "") }
+                            for (let i = 0; i < p5Canvas.length; i++) { p5Canvas[i].setAttribute("data-iframe-size", "") }
                         } else {
                             const sizingDiv = document.createElement("div")
-                            sizingDiv.setAttribute("data-iframe-width", "")
+                            sizingDiv.setAttribute("data-iframe-size", "")
                             document.body.appendChild(sizingDiv)
                         }
                     })
@@ -262,8 +264,12 @@ export default class P5JSPreview extends CodeProviderPreview {
         }
 
         // GPLv3 acknowledges use under iframe-resizer's open-source license (see https://iframe-resizer.com).
+        // Explicit id: @iframe-resizer/core auto-generates a connection id shared across every
+        // iframeResize()/<IframeResizer> instance on the page (including the main React preview),
+        // and reusing an id across an old (destroyed) and new (just-mounted) connection is unsafe.
         this.iframe = iframeResize({
                                         /*log: true,*/
+                                        id: this.id,
                                         license: "GPLv3",
                                         checkOrigin: [P5JSPreview.url.origin],
                                         direction: "both",
