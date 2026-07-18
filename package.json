@@ -34,13 +34,13 @@
     "@types/node": "^24.13.3",
     "@typescript-eslint/parser": "^8.64.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
-    "copy-webpack-plugin": "^11.0.0",
-    "css-loader": "^5.2.7",
+    "copy-webpack-plugin": "^14.0.0",
+    "css-loader": "^7.1.4",
     "electron": "43.1.1",
     "eslint": "^10.7.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.1",
-    "fork-ts-checker-webpack-plugin": "^7.3.0",
+    "fork-ts-checker-webpack-plugin": "^9.1.0",
     "globals": "^17.7.0",
     "node-loader": "^2.0.0",
     "style-loader": "^4.0.0",
@@ -57,7 +57,7 @@
     "@types/react": "^18.2.16",
     "@types/react-dom": "^18.2.7",
     "dotenv": "^17.4.2",
-    "electron-log": "^4.4.8",
+    "electron-log": "^5.4.4",
     "electron-squirrel-startup": "^1.0.0",
     "eventemitter3": "^5.0.1",
     "file-loader": "^6.2.0",
@@ -68,7 +68,7 @@
     "raw-loader": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-loader-spinner": "^5.3.4",
-    "react-markdown": "^8.0.7"
+    "react-loader-spinner": "^8.0.2",
+    "react-markdown": "^10.1.0"
   }
 }
