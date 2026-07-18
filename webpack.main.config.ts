@@ -26,8 +26,11 @@ export const mainConfig: Configuration = {
     plugins: [
         new CopyPlugin({
             patterns: [
+                // .env is gitignored (it holds real secrets like OPENAI_API_KEY) and thus doesn't
+                // exist on a fresh CI checkout. noErrorOnMissing keeps that from failing the build;
+                // src/index.ts's dotenv config() call is likewise a no-op when the file isn't there.
+                { from: './.env', to: './', noErrorOnMissing: true },
                 // Copy over prisma scheme and engine to account for the incompatibility of electron forge and prisma's generated client.
-                { from: './.env', to: './' },
                 { from: './node_modules/.prisma/client/schema.prisma', to: './schema.prisma' },
                 { from: './node_modules/.prisma/client/*.node', to: ({ absoluteFilename }) => `./${path.basename(absoluteFilename!)}` },
             ],
