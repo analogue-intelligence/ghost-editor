@@ -1,18 +1,14 @@
-import { Configuration, OpenAIApi, ChatCompletionRequestMessage } from "openai";
+import OpenAI from "openai";
 import { Block } from "@prisma/client";
 import { BlockProxy } from "../../database/proxy-types";
 import { prismaClient } from "../../database/client";
 import log from "electron-log"
 
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
-let   OPENAI: OpenAIApi | undefined = undefined;
-const MODEL                         = "gpt-3.5-turbo"
+let   OPENAI: OpenAI | undefined = undefined;
+const MODEL                      = "gpt-3.5-turbo"
 
 try {
-    OPENAI = new OpenAIApi(configuration)
+    OPENAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 } catch {
     log.warn("Failed to load OpenAI API.")
 }
@@ -29,13 +25,13 @@ export default class CodeAI {
 
     public static async errorSuggestion(code: string, errorMessage: string): Promise<string | null> {
         
-        const messages: ChatCompletionRequestMessage[] = [
+        const messages: OpenAI.ChatCompletionMessageParam[] = [
             { role: "system", content: "You are a coding assistant helping with creative coding using P5JS. Specifically, you should provide support for debugging code." },
             { role: "user",   content: `The following code results in this error message: "${errorMessage}". How could I fix that?\n${code}` }
         ]
 
         try {
-            const chatCompletion = await OPENAI.createChatCompletion({
+            const chatCompletion = await OPENAI.chat.completions.create({
                 model:             MODEL,
                 messages:          messages,
                 temperature:       this.temperature,
@@ -46,7 +42,7 @@ export default class CodeAI {
                 presence_penalty:  this.presencePenalty
             });
 
-            return chatCompletion.data.choices[0].message.content
+            return chatCompletion.choices[0].message.content
         } catch {
             if (OPENAI !== undefined) { log.warn("Failed to generate error suggestion!") }
             return null
@@ -56,7 +52,7 @@ export default class CodeAI {
     public readonly root:  BlockProxy
     public readonly block: BlockProxy
 
-    private readonly versionNameHistory: ChatCompletionRequestMessage[]
+    private readonly versionNameHistory: OpenAI.ChatCompletionMessageParam[]
 
     private readonly temperature:      number                   = CodeAI.temperature
     private readonly maxTokens:        number                   = CodeAI.maxTokens
@@ -71,7 +67,7 @@ export default class CodeAI {
         return new CodeAI(root, block, versionNameHistory)
     }
 
-    private constructor(root: BlockProxy, block: BlockProxy, versionNameHistory: ChatCompletionRequestMessage[]) {
+    private constructor(root: BlockProxy, block: BlockProxy, versionNameHistory: OpenAI.ChatCompletionMessageParam[]) {
         this.root               = root
         this.block              = block
         this.versionNameHistory = versionNameHistory
@@ -82,12 +78,12 @@ export default class CodeAI {
     }
 
     public async generateVersionInfo(versionCode: string): Promise<{ name: string, description: string }> {
-        const systemMessage: ChatCompletionRequestMessage = {
+        const systemMessage: OpenAI.ChatCompletionMessageParam = {
             role:    "system",
             content: `You are a coding assistant helping with creative coding using P5JS. Consider the following code for all requests:\n${await this.getCompleteCode()}`
         }
 
-        const requestMessage: ChatCompletionRequestMessage = {
+        const requestMessage: OpenAI.ChatCompletionMessageParam = {
             role:    "user",
             content: `Provide a name and description that allows to quickly grasp the unique impact of this code segment. Avoid textual references to previous code snippets.\n${versionCode}`
         }
@@ -96,9 +92,9 @@ export default class CodeAI {
         const versionInfo = { name: `Tag ${this.block.tags.length + 1}`, description: "No description available." }
         
         try {
-            const chatCompletion = await OPENAI.createChatCompletion({
+            const chatCompletion = await OPENAI.chat.completions.create({
                 model:             MODEL,
-                messages:          [systemMessage].concat(this.versionNameHistory, requestMessage),
+                messages:          [systemMessage, ...this.versionNameHistory, requestMessage],
                 temperature:       this.temperature,
                 max_tokens:        this.maxTokens,
                 stop:              this.stop,
@@ -108,7 +104,7 @@ export default class CodeAI {
             });
 
             // NOTE: This is not always the same format, so sometimes, I might end up with no title or description... AI and stuff... ugh.
-            const response = chatCompletion.data.choices[0].message
+            const response = chatCompletion.choices[0].message
             const lines    = response.content.split("\n")
 
             versionInfo.name = lines[0].replace('Name:', '').replace(new RegExp('"', "g"), '').trim()
