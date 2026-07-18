@@ -18,7 +18,35 @@ const config: ForgeConfig = {
             './prisma/',
             './node_modules/@prisma/engines/',
         ],
-        ignore: new RegExp("\\./.*\\.db.*")
+        // @electron-forge/plugin-webpack normally generates this itself as a function that keeps only
+        // '.webpack/**' (everything the app needs is bundled there by webpack) and prints a warning if
+        // it's overridden with anything else. This used to be a RegExp, which electron-packager treats
+        // as an *exclude* pattern rather than an allowlist - so it excluded only .db files and shipped
+        // the entire project root instead (including .env and its real secrets, .git-adjacent config,
+        // notebooks, etc.) into every packaged build. Replicating the plugin's own allowlist here, plus
+        // the original .db exclusion.
+        ignore: (file) => {
+            if (!file) return false;
+            if (/\.db(-\w+)?$/.test(file)) return true;
+            return !/^[/\\]\.webpack($|[/\\]).*$/.test(file);
+        },
+        // Without this, packaging renames/rewrites the prebuilt Electron.app bundle (executable name,
+        // Info.plist, injected resources) without ever recomputing its code signature, so macOS refuses
+        // to launch the result on Apple Silicon (invalid signature). We don't have a paid Developer ID,
+        // so this forces ad-hoc signing (identity "-") instead of the default behavior, which searches
+        // the keychain for a real "Developer ID Application" certificate and silently leaves the app
+        // unsigned (continueOnError defaults to true) if none is found. Hardened runtime is disabled too:
+        // it enforces library validation requiring every loaded binary to share a real Team ID, which two
+        // independently ad-hoc-signed binaries (the app and Electron Framework) can never satisfy.
+        // The top-level `hardenedRuntime` flag alone doesn't reach @electron/osx-sign's actual per-file
+        // codesign invocations - it only reads per-file options through `optionsForFile`, whose absence
+        // falls back to its own hardcoded `hardenedRuntime: true` default - so it has to be set here too.
+        osxSign: {
+            identity: '-',
+            identityValidation: false,
+            hardenedRuntime: false,
+            optionsForFile: () => ({ hardenedRuntime: false }),
+        },
     },
     rebuildConfig: {},
     makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
