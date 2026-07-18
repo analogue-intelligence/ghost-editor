@@ -18,17 +18,26 @@ const config: ForgeConfig = {
             './prisma/',
             './node_modules/@prisma/engines/',
         ],
-        // @electron-forge/plugin-webpack normally generates this itself as a function that keeps only
-        // '.webpack/**' (everything the app needs is bundled there by webpack) and prints a warning if
-        // it's overridden with anything else. This used to be a RegExp, which electron-packager treats
-        // as an *exclude* pattern rather than an allowlist - so it excluded only .db files and shipped
-        // the entire project root instead (including .env and its real secrets, .git-adjacent config,
-        // notebooks, etc.) into every packaged build. Replicating the plugin's own allowlist here, plus
-        // the original .db exclusion.
+        // @electron-forge/plugin-webpack normally generates this itself as a function that allowlists
+        // only '.webpack/**' and prints a warning if it's overridden with anything else. This used to be
+        // a RegExp, which electron-packager treats as an *exclude* pattern rather than an allowlist - so
+        // it excluded only .db files and shipped the entire project root into every packaged build,
+        // including .env and its real secrets, .git-adjacent config, notebooks, etc.
+        //
+        // Unlike the plugin's own default, this also allows node_modules/** and package.json through:
+        // prisma-commands.ts spawns the `prisma` CLI (a runtime dependency, not something webpack can
+        // bundle - it's invoked as a child process, not require()'d) from
+        // "<app.asar>/node_modules/prisma/build/index.js", which only ever worked because the old,
+        // broken ignore pattern happened to let all of node_modules through too. electron-packager's own
+        // pruning (packagerConfig.prune, on by default) still strips devDependencies from what's copied,
+        // same as it always did.
         ignore: (file) => {
             if (!file) return false;
             if (/\.db(-\w+)?$/.test(file)) return true;
-            return !/^[/\\]\.webpack($|[/\\]).*$/.test(file);
+            if (/^[/\\]\.webpack($|[/\\])/.test(file)) return false;
+            if (/^[/\\]node_modules($|[/\\])/.test(file)) return false;
+            if (/^[/\\]package\.json$/.test(file)) return false;
+            return true;
         },
         // Without this, packaging renames/rewrites the prebuilt Electron.app bundle (executable name,
         // Info.plist, injected resources) without ever recomputing its code signature, so macOS refuses

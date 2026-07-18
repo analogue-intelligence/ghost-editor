@@ -42,6 +42,6 @@ export const schemaEnginePath = isDev
     ? path.join(extraResourcesPath, "node_modules", "@prisma", "engines", schemaEngine)
     : path.join(extraResourcesPath, "engines", schemaEngine)
 
-export const queryEnginePath  = isDev 
+export const queryEnginePath  = isDev
     ? path.join(extraResourcesPath, "node_modules", "@prisma", "engines", queryEngine)
-    : path.join(extraResourcesPath, "app.asar.unpacked", "node_modules", "@prisma", "engines", queryEngine)
+    : path.join(extraResourcesPath, "engines", queryEngine)
