@@ -13,9 +13,12 @@ rules.push({
 });
 
 // required by MonacoWebpackPlugin
+// Uses webpack 5's built-in Asset Modules rather than file-loader: css-loader 6+ resolves
+// url() references against the module graph and double-emits/mis-hashes assets that go
+// through a loader instead of a native asset module.
 rules.push({
     test: /\.ttf$/,
-    use: ['file-loader']
+    type: 'asset/resource',
 })
 
 export const rendererConfig: Configuration = {
