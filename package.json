@@ -52,7 +52,7 @@
   "dependencies": {
     "@iframe-resizer/child": "^5.5.9",
     "@iframe-resizer/parent": "^5.5.9",
-    "@prisma/client": "^5.0.0",
+    "@prisma/client": "^6.19.3",
     "@types/p5": "^1.6.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -63,7 +63,7 @@
     "monaco-editor": "^0.55.1",
     "monaco-editor-webpack-plugin": "^7.1.0",
     "openai": "^3.3.0",
-    "prisma": "^5.0.0",
+    "prisma": "^6.19.3",
     "raw-loader": "^4.0.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
