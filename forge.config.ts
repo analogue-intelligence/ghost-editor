@@ -12,6 +12,12 @@ import { rendererConfig } from './webpack.renderer.config.ts';
 const config: ForgeConfig = {
     packagerConfig: {
         asar: true,
+        // Without this, Packager names the built binary after productName ("Ghost IDE"), but
+        // maker-deb/maker-rpm (via electron-installer-common's getDefaultsFromPackageJSON) default
+        // the binary name they look for to package.json's `name` field ("ghost-editor") instead of
+        // productName. That mismatch makes both Linux makers fail with "could not find the Electron
+        // app binary" - this aligns the actual executable name with what they expect.
+        executableName: 'ghost-editor',
         // Currently, the native_modules loader (defined in webpack.rules.ts) has to be excluded for various reasons (see comments in that file). To make prisma work, we thus need to copy the required files manually.
         // For more info on this fix, see: https://github.com/prisma/prisma/issues/12627
         extraResource: [
